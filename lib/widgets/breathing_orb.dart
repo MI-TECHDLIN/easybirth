@@ -8,7 +8,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import '../../theme.dart';
 
 enum OrbState { idle, listening, processing, result }
 

@@ -1,8 +1,14 @@
+// main.dart
+// Drop into: lib/main.dart
+// App entry point — decides between Loading / Onboarding / Sign Up / Home
+// based on persisted flags in SharedPreferences.
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/sign_up_screen.dart';
 
 void main() {
   runApp(const EasyBirthApp());
@@ -19,18 +25,24 @@ class _EasyBirthAppState extends State<EasyBirthApp> {
   bool _isLoading = true;
   bool _showOnboarding = false;
 
+  // NEW: true once onboarding is done but the user hasn't verified their
+  // phone number yet (i.e. hasn't completed Sign Up + OTP).
+  bool _showAuth = false;
+
   @override
   void initState() {
     super.initState();
-    _loadOnboardingState();
+    _loadAppState();
   }
 
-  Future<void> _loadOnboardingState() async {
+  Future<void> _loadAppState() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+    final isVerified = prefs.getBool('isVerified') ?? false;
     if (!mounted) return;
     setState(() {
       _showOnboarding = !hasSeenOnboarding;
+      _showAuth = hasSeenOnboarding && !isVerified;
       _isLoading = false;
     });
   }
@@ -41,23 +53,35 @@ class _EasyBirthAppState extends State<EasyBirthApp> {
     if (!mounted) return;
     setState(() {
       _showOnboarding = false;
+      _showAuth = true; // send the user into Sign Up next, not straight Home
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    Widget screen;
+    if (_isLoading) {
+      screen = const Scaffold(body: Center(child: CircularProgressIndicator()));
+    } else if (_showOnboarding) {
+      screen = OnboardingScreen(
+        onComplete: _finishOnboarding,
+        onSkip: _finishOnboarding,
+      );
+    } else if (_showAuth) {
+      // SignUpScreen -> OtpVerificationScreen handles the rest of the auth
+      // flow internally (pushed via Navigator) and persists 'isVerified'
+      // to SharedPreferences once the code is confirmed, then routes to
+      // HomeScreen. See otp_verification_screen.dart.
+      screen = const SignUpScreen();
+    } else {
+      screen = const HomeScreen();
+    }
+
     return MaterialApp(
       title: 'easybirth',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: _isLoading
-          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : _showOnboarding
-          ? OnboardingScreen(
-              onComplete: _finishOnboarding,
-              onSkip: _finishOnboarding,
-            )
-          : const HomeScreen(),
+      home: screen,
     );
   }
 }
