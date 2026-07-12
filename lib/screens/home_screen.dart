@@ -3,6 +3,10 @@
 // Drop into: lib/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
+import '../models/pregnancy_profile.dart';
+import '../models/vaccine_schedule.dart';
+import '../widgets/pregnancy_journey_graph.dart';
+import '../widgets/progress_tracker_card.dart';
 import '../../theme.dart';
 import '../../widgets/breathing_orb.dart';
 import 'voice_listening_screen.dart';
@@ -99,6 +103,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ProgressTrackerCard(
+                profile: PregnancyProfile(
+                  patientId: 'demo',
+                  lastMenstrualPeriod: DateTime.now().subtract(
+                    Duration(days: (widget.gestationalWeek - 1) * 7),
+                  ),
+                ),
+                schedule: defaultSchedule,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 280,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: PregnancyJourneyGraph(
+                  profile: PregnancyProfile(
+                    patientId: 'demo',
+                    lastMenstrualPeriod: DateTime.now().subtract(
+                      Duration(days: (widget.gestationalWeek - 1) * 7),
+                    ),
+                  ),
+                  schedule: defaultSchedule,
+                ),
+              ),
+            ),
 
             // Orb hero — center of remaining space
             Expanded(
@@ -145,9 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'HAUSA SUGGESTIONS',
-                  style: AppTextStyles.caption.copyWith(
-                    letterSpacing: 0.6,
-                  ),
+                  style: AppTextStyles.caption.copyWith(letterSpacing: 0.6),
                 ),
               ),
             ),
@@ -157,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _suggestions.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final text = _suggestions[index];
                   final selected = index == 0;
@@ -187,10 +218,26 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _navIndex,
         onDestinationSelected: (i) => setState(() => _navIndex = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.medical_services_outlined), selectedIcon: Icon(Icons.medical_services), label: 'Triage'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), selectedIcon: Icon(Icons.menu_book), label: 'Learn'),
-          NavigationDestination(icon: Icon(Icons.calendar_today_outlined), selectedIcon: Icon(Icons.calendar_today), label: 'ANC'),
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.medical_services_outlined),
+            selectedIcon: Icon(Icons.medical_services),
+            label: 'Triage',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Learn',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
+            label: 'ANC',
+          ),
         ],
       ),
     );
