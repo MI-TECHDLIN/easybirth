@@ -7,7 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.easy"
-    compileSdk = flutter.compileSdkVersion
+    // Use an explicit compileSdk to satisfy AndroidX AAR metadata (some
+    // transitive plugins require API 34+). Set to 36 for compatibility.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -21,7 +23,8 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Keep targetSdk in sync with compileSdk where possible.
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

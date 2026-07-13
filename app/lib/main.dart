@@ -5,8 +5,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// `hive_flutter` and `supabase_flutter` are initialized/used in services.
+// Avoid importing them here to prevent unused-import warnings.
 import 'config/supabase_config.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';

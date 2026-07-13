@@ -1,11 +1,35 @@
 class PregnancyProfile {
   final String patientId;
+  final String patientName;
+  final String phoneNumber;
   final DateTime lastMenstrualPeriod;
 
   const PregnancyProfile({
     required this.patientId,
+    required this.patientName,
+    required this.phoneNumber,
     required this.lastMenstrualPeriod,
   });
+
+  factory PregnancyProfile.fromJson(Map<String, dynamic> json) {
+    return PregnancyProfile(
+      patientId: json['patientId'] as String,
+      patientName: json['patientName'] as String,
+      phoneNumber: json['phoneNumber'] as String,
+      lastMenstrualPeriod: DateTime.parse(
+        json['lastMenstrualPeriod'] as String,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'patientId': patientId,
+      'patientName': patientName,
+      'phoneNumber': phoneNumber,
+      'lastMenstrualPeriod': lastMenstrualPeriod.toIso8601String(),
+    };
+  }
 
   DateTime get estimatedDueDate =>
       lastMenstrualPeriod.add(const Duration(days: 280));
