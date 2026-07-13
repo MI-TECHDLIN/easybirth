@@ -6,6 +6,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/supabase_config.dart';
+import '../services/storage_service.dart';
+import '../services/supabase_service.dart';
 import '../theme.dart';
 import 'home_screen.dart';
 
@@ -36,7 +39,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(widget.codeLength, (_) => TextEditingController());
+    _controllers = List.generate(
+      widget.codeLength,
+      (_) => TextEditingController(),
+    );
     _focusNodes = List.generate(widget.codeLength, (_) => FocusNode());
     _secondsLeft = widget.resendSeconds;
     _startCountdown();
@@ -86,9 +92,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
     _focusNodes.first.requestFocus();
     _startCountdown();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code resent')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Code resent')));
   }
 
   Future<void> _handleVerify() async {
@@ -109,6 +115,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     // of showing Sign Up / OTP again. Read by main.dart's _loadAppState().
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isVerified', true);
+
+    if (isSupabaseConfigured) {
+      final profile = StorageService.loadProfile();
+      final schedule = StorageService.loadScheduleEntries();
+      if (profile != null) {
+        await SupabaseService.syncPatientProfile(profile);
+        await SupabaseService.syncScheduleEntries(profile, schedule);
+      }
+    }
 
     if (!mounted) return;
     setState(() => _verifying = false);
@@ -143,13 +158,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               Center(child: _VerifyIllustration()),
               const SizedBox(height: 28),
               Center(
-                child: Text('Verify Your Number', style: AppTextStyles.headline),
+                child: Text(
+                  'Verify Your Number',
+                  style: AppTextStyles.headline,
+                ),
               ),
               const SizedBox(height: 10),
               Center(
                 child: Text(
                   'We sent a 6-digit code to',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
@@ -181,12 +201,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(widget.codeLength, (i) => _OtpBox(
-                      controller: _controllers[i],
-                      focusNode: _focusNodes[i],
-                      filled: _controllers[i].text.isNotEmpty,
-                      onChanged: (value) => _onDigitChanged(i, value),
-                    )),
+                children: List.generate(
+                  widget.codeLength,
+                  (i) => _OtpBox(
+                    controller: _controllers[i],
+                    focusNode: _focusNodes[i],
+                    filled: _controllers[i].text.isNotEmpty,
+                    onChanged: (value) => _onDigitChanged(i, value),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -195,7 +218,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   _secondsLeft > 0
                       ? 'Resend code in $_formattedCountdown'
                       : 'You can resend the code now',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -205,14 +230,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   child: Text.rich(
                     TextSpan(
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: _secondsLeft > 0 ? AppColors.outline : AppColors.textSecondary,
+                        color: _secondsLeft > 0
+                            ? AppColors.outline
+                            : AppColors.textSecondary,
                       ),
                       children: [
                         const TextSpan(text: "Didn't get the code?  "),
                         TextSpan(
                           text: 'Resend',
                           style: TextStyle(
-                            color: _secondsLeft > 0 ? AppColors.outline : AppColors.primary,
+                            color: _secondsLeft > 0
+                                ? AppColors.outline
+                                : AppColors.primary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -229,7 +258,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text('Verify & Continue  →'),
               ),
@@ -238,7 +270,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.shield_outlined, size: 14, color: AppColors.outline),
+                    const Icon(
+                      Icons.shield_outlined,
+                      size: 14,
+                      color: AppColors.outline,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Your number is secured and never shared',
@@ -285,14 +321,22 @@ class _OtpBox extends StatelessWidget {
         decoration: InputDecoration(
           counterText: '',
           filled: true,
-          fillColor: filled ? AppColors.primaryContainer.withValues(alpha: 0.4) : AppColors.surfaceVariant,
+          fillColor: filled
+              ? AppColors.primaryContainer.withValues(alpha: 0.4)
+              : AppColors.surfaceVariant,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: filled ? AppColors.primary : Colors.transparent, width: 1.5),
+            borderSide: BorderSide(
+              color: filled ? AppColors.primary : Colors.transparent,
+              width: 1.5,
+            ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: filled ? AppColors.primary : Colors.transparent, width: 1.5),
+            borderSide: BorderSide(
+              color: filled ? AppColors.primary : Colors.transparent,
+              width: 1.5,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),

@@ -5,12 +5,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// `hive_flutter` and `supabase_flutter` are initialized/used in services.
+// Avoid importing them here to prevent unused-import warnings.
+import 'config/supabase_config.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/sign_up_screen.dart';
+import 'services/supabase_service.dart';
+import 'services/storage_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.init();
+  if (isSupabaseConfigured) {
+    await SupabaseService.init(url: supabaseUrl, anonKey: supabaseAnonKey);
+  }
   runApp(const EasyBirthApp());
 }
 

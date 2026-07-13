@@ -21,6 +21,38 @@ class ScheduleEntry {
     this.status = DoseStatus.upcoming,
   });
 
+  factory ScheduleEntry.fromJson(Map<String, dynamic> json) {
+    return ScheduleEntry(
+      code: json['code'] as String,
+      type: DoseType.values.firstWhere(
+        (value) => value.name == json['type'],
+        orElse: () => DoseType.anc,
+      ),
+      scheduledWeek: json['scheduledWeek'] as int,
+      scheduledDayOfWeek: json['scheduledDayOfWeek'] as int,
+      label: json['label'] as String,
+      completedDate: json['completedDate'] != null
+          ? DateTime.parse(json['completedDate'] as String)
+          : null,
+      status: DoseStatus.values.firstWhere(
+        (value) => value.name == json['status'],
+        orElse: () => DoseStatus.upcoming,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'type': type.name,
+      'scheduledWeek': scheduledWeek,
+      'scheduledDayOfWeek': scheduledDayOfWeek,
+      'label': label,
+      'completedDate': completedDate?.toIso8601String(),
+      'status': status.name,
+    };
+  }
+
   ScheduleEntry copyWith({DateTime? completedDate, DoseStatus? status}) {
     return ScheduleEntry(
       code: code,

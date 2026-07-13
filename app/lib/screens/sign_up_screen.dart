@@ -3,7 +3,11 @@
 // Drop into: lib/screens/sign_up_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../theme.dart';
+import '../models/pregnancy_profile.dart';
+import '../models/vaccine_schedule.dart';
+import '../services/storage_service.dart';
 import 'otp_verification_screen.dart';
 
 /// Minimal country-code list for the prototype. Swap for the
@@ -36,8 +40,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phoneController = TextEditingController();
 
   _CountryCode _selectedCountry = _countryCodes.first;
+  late DateTime _selectedLmp;
   bool _agreedToTerms = false;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLmp = DateTime.now().subtract(const Duration(days: 90));
+  }
 
   @override
   void dispose() {
@@ -72,7 +83,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: 12),
               for (final country in _countryCodes)
                 ListTile(
-                  leading: Text(country.flag, style: const TextStyle(fontSize: 22)),
+                  leading: Text(
+                    country.flag,
+                    style: const TextStyle(fontSize: 22),
+                  ),
                   title: Text(country.name, style: AppTextStyles.bodyMedium),
                   trailing: Text(country.dialCode, style: AppTextStyles.label),
                   onTap: () {
@@ -88,16 +102,43 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  void _pickLmpDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedLmp,
+      firstDate: DateTime.now().subtract(const Duration(days: 280)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _selectedLmp = picked);
+    }
+  }
+
   Future<void> _handleCreateAccount() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please agree to the Terms of Service and Privacy Policy')),
+        const SnackBar(
+          content: Text(
+            'Please agree to the Terms of Service and Privacy Policy',
+          ),
+        ),
       );
       return;
     }
 
     setState(() => _submitting = true);
+
+    final profile = PregnancyProfile(
+      patientId: const Uuid().v4(),
+      patientName: _nameController.text.trim(),
+      phoneNumber:
+          '${_selectedCountry.dialCode} ${_phoneController.text.trim()}',
+      lastMenstrualPeriod: _selectedLmp,
+    );
+
+    await StorageService.saveProfile(profile);
+    await StorageService.saveScheduleEntries(defaultSchedule);
 
     // Simulated network delay before "sending" the OTP.
     // Replace with a real phone-auth call when a backend is wired up.
@@ -108,9 +149,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          fullPhoneNumber: '${_selectedCountry.dialCode} ${_phoneController.text.trim()}',
-        ),
+        builder: (_) =>
+            OtpVerificationScreen(fullPhoneNumber: profile.phoneNumber),
       ),
     );
   }
@@ -146,14 +186,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.eco, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.eco,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
                 Text.rich(
                   TextSpan(
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                     children: [
                       const TextSpan(text: 'Join thousands of mothers on '),
                       TextSpan(
@@ -179,8 +225,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     hint: 'e.g. Amina Yusuf',
                     icon: Icons.person_outline,
                   ),
-                  validator: (value) =>
-                      (value == null || value.trim().isEmpty) ? 'Enter your full name' : null,
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Enter your full name'
+                      : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -202,11 +249,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(_selectedCountry.flag, style: const TextStyle(fontSize: 18)),
+                            Text(
+                              _selectedCountry.flag,
+                              style: const TextStyle(fontSize: 18),
+                            ),
                             const SizedBox(width: 6),
-                            Text(_selectedCountry.dialCode, style: AppTextStyles.label),
+                            Text(
+                              _selectedCountry.dialCode,
+                              style: AppTextStyles.label,
+                            ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.outline),
+                            const Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 18,
+                              color: AppColors.outline,
+                            ),
                           ],
                         ),
                       ),
@@ -222,21 +279,52 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           icon: Icons.phone_outlined,
                         ),
                         validator: (value) =>
-                            (value == null || value.trim().length < 7) ? 'Enter a valid phone number' : null,
+                            (value == null || value.trim().length < 7)
+                            ? 'Enter a valid phone number'
+                            : null,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-
+                _FieldLabel('Last menstrual period'),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickLmpDate,
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${_selectedLmp.day.toString().padLeft(2, '0')}/${_selectedLmp.month.toString().padLeft(2, '0')}/${_selectedLmp.year}',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        const Icon(
+                          Icons.calendar_month,
+                          color: AppColors.outline,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Checkbox(
                       value: _agreedToTerms,
                       activeColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      onChanged: (value) => setState(() => _agreedToTerms = value ?? false),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      onChanged: (value) =>
+                          setState(() => _agreedToTerms = value ?? false),
                     ),
                     Expanded(
                       child: Padding(
@@ -251,12 +339,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               const TextSpan(text: "I agree to easybirth's "),
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -273,7 +367,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Create Account  →'),
                 ),
@@ -281,12 +378,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Center(
                   child: Text.rich(
                     TextSpan(
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                       children: [
                         const TextSpan(text: 'Already have an account?  '),
                         TextSpan(
                           text: 'Sign In',
-                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -301,7 +403,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  InputDecoration _inputDecoration({required String hint, required IconData icon}) {
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
     return InputDecoration(
       hintText: hint,
       hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.outline),
@@ -342,7 +447,10 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: AppTextStyles.label.copyWith(color: AppColors.textSecondary));
+    return Text(
+      text,
+      style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
+    );
   }
 }
 

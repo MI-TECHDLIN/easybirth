@@ -34,6 +34,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1        # <-- add this line
   shared_preferences: ^2.2.0
+  hive_flutter: ^1.1.0
+  supabase_flutter: ^2.16.0
+  uuid: ^3.0.7
+
+dependency_overrides:
+  sign_in_with_apple: ^8.1.0
+  sign_in_with_apple_platform_interface: ^2.0.0
+  sign_in_with_apple_web: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -68,7 +76,7 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # To add custom fonts to your application, add a fonts section here,
+  # To add custom fonts to your application, add a fonts sectionflu here,
   # in this "flutter" section. Each entry in this list should have a
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
@@ -87,3 +95,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+ 
