@@ -5,24 +5,30 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/triage_service.dart';
+import '../models/conversation_turn.dart';
 import '../models/triage_response.dart';
 import '../theme.dart';
 import '../widgets/breathing_orb.dart';
 import 'risk_result_screen.dart';
+import 'voice_listening_screen.dart';
 
 class AiProcessingScreen extends StatefulWidget {
+  final String sessionId;
   final String transcript;
   final String language;
   final String patientName;
   final int gestationalWeek;
+  final List<ConversationTurn> conversationHistory;
   final RiskLevel? seedResultLevel;
 
   const AiProcessingScreen({
     super.key,
+    required this.sessionId,
     required this.transcript,
     required this.language,
     required this.patientName,
     required this.gestationalWeek,
+    required this.conversationHistory,
     this.seedResultLevel,
   });
 
@@ -49,8 +55,10 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
   Future<void> _runTriage() async {
     try {
       final response = await TriageService.instance.runTriage(
+        sessionId: widget.sessionId,
         transcript: widget.transcript,
         language: widget.language,
+        conversationHistory: widget.conversationHistory,
         gestationalWeek: widget.gestationalWeek,
         patientName: widget.patientName,
       );
@@ -58,9 +66,18 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
       if (!mounted) return;
       if (response.decision == 'need_more_info' &&
           response.followUpQuestion != null) {
+        final nextHistory = [
+          ...widget.conversationHistory,
+          ConversationTurn(
+            role: 'assistant',
+            content: response.followUpQuestion!,
+          ),
+        ];
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => VoiceListeningScreen(
+              sessionId: widget.sessionId,
+              conversationHistory: nextHistory,
               languageLabel: _normalizeLanguageLabel(widget.language),
               promptMessage: response.followUpQuestion,
             ),
@@ -71,22 +88,8 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => RiskResultScreen(
-            riskLevel: response.riskLevel,
-            symptoms: response.detectedSymptoms,
-            transcript: widget.transcript,
-            confidence: 0.95,
-            inferenceSeconds: 1.4,
-            chwNotified: response.riskLevel == RiskLevel.high,
-          ),
-        ),
-      );
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => RiskResultScreen(
-            riskLevel: response.riskLevel,
-            symptoms: response.detectedSymptoms,
+          builder: (_) => RiskResultScreen.fromTriageResponse(
+            response,
             transcript: widget.transcript,
             confidence: 0.95,
             inferenceSeconds: 1.4,
@@ -102,6 +105,9 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
             riskLevel: widget.seedResultLevel ?? RiskLevel.high,
             symptoms: const ['Simulated result due to backend error'],
             transcript: widget.transcript,
+            recommendation:
+                widget.seedResultLevel?.recommendation ??
+                'The system is unable to determine a final risk result at this time.',
             confidence: 0.0,
             inferenceSeconds: 0.0,
             chwNotified: false,

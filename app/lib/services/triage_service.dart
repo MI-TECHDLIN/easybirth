@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
 
 import '../config/api_config.dart';
+import '../models/conversation_turn.dart';
 import '../models/triage_response.dart';
 
 class TriageService {
@@ -18,8 +18,10 @@ class TriageService {
   );
 
   Future<TriageResponse> runTriage({
+    required String sessionId,
     required String transcript,
     required String language,
+    required List<ConversationTurn> conversationHistory,
     required int gestationalWeek,
     required String patientName,
     String? chwPhone,
@@ -27,8 +29,10 @@ class TriageService {
     final payload = {
       'transcript': transcript,
       'language': language,
-      'session_id': const Uuid().v4(),
-      'conversation_history': <Map<String, String>>[],
+      'session_id': sessionId,
+      'conversation_history': conversationHistory
+          .map((turn) => turn.toJson())
+          .toList(),
       'gestational_week': gestationalWeek,
       'patient_name': patientName,
       'chw_phone': chwPhone,

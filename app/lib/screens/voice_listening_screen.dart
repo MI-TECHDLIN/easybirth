@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
+import '../models/conversation_turn.dart';
 import '../theme.dart';
 import '../widgets/breathing_orb.dart';
 import 'ai_processing_screen.dart';
@@ -31,6 +33,8 @@ class VoiceListeningScreen extends StatefulWidget {
   /// pre-filled instead of being built up from the simulated stream.
   final String? prefillTranscript;
   final String? promptMessage;
+  final String sessionId;
+  final List<ConversationTurn> conversationHistory;
 
   const VoiceListeningScreen({
     super.key,
@@ -38,6 +42,8 @@ class VoiceListeningScreen extends StatefulWidget {
     this.flagEmoji = '🇳🇬',
     this.prefillTranscript,
     this.promptMessage,
+    required this.sessionId,
+    required this.conversationHistory,
   });
 
   @override
@@ -101,13 +107,20 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
 
   void _finish() {
     final transcript = widget.prefillTranscript ?? _revealedLines.join(' ');
+    final history = [
+      ...widget.conversationHistory,
+      ConversationTurn(role: 'user', content: transcript),
+    ];
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => AiProcessingScreen(
+          sessionId: widget.sessionId,
           transcript: transcript,
           language: _languageCode,
           patientName: 'Amina',
           gestationalWeek: 30,
+          conversationHistory: history,
         ),
       ),
     );

@@ -3,6 +3,7 @@
 // Drop into: lib/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import '../models/pregnancy_profile.dart';
 import '../models/vaccine_schedule.dart';
 import '../services/storage_service.dart';
@@ -70,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => VoiceListeningScreen(
           languageLabel: 'Hausa',
           prefillTranscript: prefillText,
+          sessionId: const Uuid().v4(),
+          conversationHistory: const [],
         ),
       ),
     );

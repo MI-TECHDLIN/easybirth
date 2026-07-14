@@ -7,18 +7,33 @@ from typing import Any
 import httpx
 
 from api.core.config import settings
-from api.schemas.triage import TriageRequest, TriageResponse
+from api.schemas.triage import ConversationTurn, TriageRequest, TriageResponse
+from api.services.triage_session_store import store as triage_session_store
 
 
 class TriageService:
     def assess(self, payload: TriageRequest) -> TriageResponse:
+        persisted_history = triage_session_store.get_history(payload.session_id)
+        request_history = payload.conversation_history or persisted_history
+
+        response = None
         if settings.anthropic_api_key:
             try:
-                return self._assess_with_anthropic(payload)
+                response = self._assess_with_anthropic(payload)
             except Exception as exc:
                 print(f'Anthropic triage failed: {exc}')
 
-        return self._keyword_fallback(payload)
+        if response is None:
+            response = self._keyword_fallback(payload)
+
+        if response.decision == 'need_more_info' and response.follow_up_question:
+            request_history = [
+                ...request_history,
+                ConversationTurn(role='assistant', content=response.follow_up_question),
+            ]
+
+        triage_session_store.save_history(payload.session_id, request_history)
+        return response
 
     def _assess_with_anthropic(self, payload: TriageRequest) -> TriageResponse:
         prompt = self._build_prompt(payload)
