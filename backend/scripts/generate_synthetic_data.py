@@ -56,8 +56,11 @@ def build_dataset(samples: int, seed: int) -> pd.DataFrame:
         weeks_pregnant = max(1, min(42, weeks_pregnant))
 
         height_cm = round(float(rng.normal(loc=162, scale=8)), 1)
+        height_cm = max(130, min(210, height_cm))  # Realistic height range
         weight_kg = round(float(rng.normal(loc=68, scale=12)), 1)
+        weight_kg = max(35, min(200, weight_kg))  # Realistic weight range
         bmi = round(weight_kg / ((height_cm / 100) ** 2), 2)
+        bmi = max(12, min(60, bmi))  # Clamp BMI to realistic range
 
         previous_pregnancies = int(rng.integers(0, 4))
         previous_c_section = int(rng.random() < 0.15)
