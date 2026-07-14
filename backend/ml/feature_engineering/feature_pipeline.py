@@ -196,8 +196,9 @@ class FeatureEngineeringPipeline(BaseEstimator, TransformerMixin):
             )
         )
 
-        # Emergency flags
-        features["emergency_flag"] = calculators.has_emergency_flag(
+        # Emergency flags: combine explicit emergency symptoms with
+        # systemic hypertension risk (Stage 2 or history-driven risk).
+        explicit_emergency = calculators.has_emergency_flag(
             bleeding=validated_data.get("bleeding", 0),
             difficulty_breathing=validated_data.get("difficulty_breathing", 0),
             severe_vomiting=validated_data.get("severe_vomiting", 0),
@@ -205,6 +206,7 @@ class FeatureEngineeringPipeline(BaseEstimator, TransformerMixin):
                 "reduced_fetal_movement", 0
             ),
         )
+        features["emergency_flag"] = 1 if (explicit_emergency or features.get("hypertension_risk", 0)) else 0
 
         # ============================================================
         # Stage 4: Keep original vitals (for model input)

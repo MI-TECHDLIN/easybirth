@@ -277,11 +277,9 @@ def compute_bp_category(systolic_bp: int, diastolic_bp: int) -> int:
 
     if systolic_bp < 120 and diastolic_bp < 80:
         return 0  # Normal
-    elif systolic_bp < 130 and diastolic_bp < 80:
+    elif 120 <= systolic_bp < 130 and diastolic_bp <= 80:
         return 1  # Elevated
-    elif (120 <= systolic_bp < 140 and diastolic_bp < 90) or (
-        diastolic_bp >= 80 and diastolic_bp < 90
-    ):
+    elif (130 <= systolic_bp < 140 or (80 <= diastolic_bp < 90)):
         return 2  # Stage 1
     else:
         return 3  # Stage 2

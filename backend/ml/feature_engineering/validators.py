@@ -232,6 +232,28 @@ def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
             errors.append(f"weight_kg: {msg}")
 
     # Validate vitals
+    # Validate systolic and diastolic individually if provided, and validate the
+    # pair if both are present (to check relational constraints like Systolic > Diastolic)
+    if "systolic_bp" in data:
+        sbp = data["systolic_bp"]
+        if not isinstance(sbp, int):
+            errors.append(f"systolic_bp: Systolic BP must be integer, got {type(sbp).__name__}")
+        else:
+            if sbp < 60:
+                errors.append(f"systolic_bp: Systolic BP too low (< 60): {sbp}")
+            if sbp > 220:
+                errors.append(f"systolic_bp: Systolic BP too high (> 220): {sbp}")
+
+    if "diastolic_bp" in data:
+        dbp = data["diastolic_bp"]
+        if not isinstance(dbp, int):
+            errors.append(f"diastolic_bp: Diastolic BP must be integer, got {type(dbp).__name__}")
+        else:
+            if dbp < 40:
+                errors.append(f"diastolic_bp: Diastolic BP too low (< 40): {dbp}")
+            if dbp > 140:
+                errors.append(f"diastolic_bp: Diastolic BP too high (> 140): {dbp}")
+
     if "systolic_bp" in data and "diastolic_bp" in data:
         valid, msg = _validate_blood_pressure(
             data["systolic_bp"], data["diastolic_bp"]

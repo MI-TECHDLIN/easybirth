@@ -129,16 +129,17 @@ def train_val_test_split(
     )
 
     # Second split: val vs test (within temp set)
+    # Use different seed for second split to avoid overlap
     val_frac_of_temp = val_size / temp_size
     val, test = train_test_split(
         temp,
         test_size=1 - val_frac_of_temp,
         train_size=val_frac_of_temp,
         stratify=temp[stratify_col],
-        random_state=random_state,
+        random_state=random_state + 1,  # Different seed for second split
     )
 
-    # Reset indices
+    # Reset indices to 0-based for clean DataFrames
     train = train.reset_index(drop=True)
     val = val.reset_index(drop=True)
     test = test.reset_index(drop=True)
