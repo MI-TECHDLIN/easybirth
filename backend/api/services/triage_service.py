@@ -28,7 +28,7 @@ class TriageService:
 
         if response.decision == 'need_more_info' and response.follow_up_question:
             request_history = [
-                ...request_history,
+                *request_history,
                 ConversationTurn(role='assistant', content=response.follow_up_question),
             ]
 

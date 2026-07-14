@@ -7,6 +7,7 @@ from .model_factory import create_model
 from .metrics import compute_metrics
 from .artifact_manager import ArtifactManager
 from .calibration import calibrate_model
+from ml.pipelines.training_pipeline import run_training
 
 
 class Trainer:
@@ -26,7 +27,30 @@ class Trainer:
         self.artifact_manager = ArtifactManager(self.artifact_dir)
         self.logger = logging.getLogger(__name__)
 
-    def train(self, X_train, y_train, X_val, y_val, X_test=None, y_test=None, preprocessor=None):
+    def train(
+        self,
+        X_train=None,
+        y_train=None,
+        X_val=None,
+        y_val=None,
+        X_test=None,
+        y_test=None,
+        preprocessor=None,
+        data_path=None,
+        **kwargs,
+    ):
+        # Backwards-compatible training entrypoint: accept legacy `data_path`
+        # either as an explicit kwarg or inside **kwargs (some tests call it
+        # as a named argument and older signatures varied). Prefer explicit
+        # parameter then fall back to kwargs.
+        legacy_path = data_path if data_path is not None else kwargs.get("data_path")
+        if legacy_path is not None:
+            return run_training(
+                data_path=Path(legacy_path) if legacy_path else None,
+                output_dir=Path(self.artifact_dir),
+                random_state=self.config.random_seed,
+            )
+
         start = time.time()
         # build model
         model = create_model(self.config)
