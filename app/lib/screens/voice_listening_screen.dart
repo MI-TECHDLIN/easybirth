@@ -30,12 +30,14 @@ class VoiceListeningScreen extends StatefulWidget {
   /// If provided (e.g. tapped from a suggestion chip), the transcript is
   /// pre-filled instead of being built up from the simulated stream.
   final String? prefillTranscript;
+  final String? promptMessage;
 
   const VoiceListeningScreen({
     super.key,
     this.languageLabel = 'Hausa',
     this.flagEmoji = '🇳🇬',
     this.prefillTranscript,
+    this.promptMessage,
   });
 
   @override
@@ -158,6 +160,37 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
               ),
             ),
 
+            const SizedBox(height: 24),
+            if (widget.promptMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Follow-up question',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.promptMessage!,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
             const BreathingOrb(state: OrbState.listening),
             const SizedBox(height: 8),

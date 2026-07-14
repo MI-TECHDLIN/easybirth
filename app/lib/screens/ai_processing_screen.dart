@@ -56,6 +56,32 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
       );
 
       if (!mounted) return;
+      if (response.decision == 'need_more_info' &&
+          response.followUpQuestion != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => VoiceListeningScreen(
+              languageLabel: _normalizeLanguageLabel(widget.language),
+              promptMessage: response.followUpQuestion,
+            ),
+          ),
+        );
+        return;
+      }
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => RiskResultScreen(
+            riskLevel: response.riskLevel,
+            symptoms: response.detectedSymptoms,
+            transcript: widget.transcript,
+            confidence: 0.95,
+            inferenceSeconds: 1.4,
+            chwNotified: response.riskLevel == RiskLevel.high,
+          ),
+        ),
+      );
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => RiskResultScreen(
@@ -89,6 +115,21 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
   void dispose() {
     _dotsTimer?.cancel();
     super.dispose();
+  }
+
+  String _normalizeLanguageLabel(String language) {
+    switch (language.toLowerCase()) {
+      case 'hausa':
+        return 'Hausa';
+      case 'yoruba':
+        return 'Yoruba';
+      case 'igbo':
+        return 'Igbo';
+      case 'pidgin':
+        return 'Pidgin';
+      default:
+        return 'Hausa';
+    }
   }
 
   @override
