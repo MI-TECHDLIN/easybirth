@@ -1,13 +1,90 @@
 """AI triage service for the EasyBirth backend."""
 from __future__ import annotations
 
+import json
+from typing import Any
+
+import httpx
+
+from api.core.config import settings
 from api.schemas.triage import TriageRequest, TriageResponse
 
 
 class TriageService:
     def assess(self, payload: TriageRequest) -> TriageResponse:
-        # TODO: replace this stub with an Anthropic Claude API call.
-        # The current behavior is a stable placeholder for demo wiring.
+        if settings.anthropic_api_key:
+            try:
+                return self._assess_with_anthropic(payload)
+            except Exception as exc:
+                print(f'Anthropic triage failed: {exc}')
+
+        return self._keyword_fallback(payload)
+
+    def _assess_with_anthropic(self, payload: TriageRequest) -> TriageResponse:
+        prompt = self._build_prompt(payload)
+        request_body = {
+            'model': settings.anthropic_model,
+            'prompt': prompt,
+            'max_tokens_to_sample': 512,
+            'temperature': 0.2,
+            'stop_sequences': ['\n\n'],
+        }
+
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post(
+                'https://api.anthropic.com/v1/complete',
+                headers={
+                    'x-api-key': settings.anthropic_api_key,
+                    'Content-Type': 'application/json',
+                },
+                json=request_body,
+            )
+            response.raise_for_status()
+            payload_json = response.json()
+
+        completion = payload_json.get('completion')
+        if not isinstance(completion, str):
+            raise ValueError('Invalid completion format from Anthropic')
+
+        parsed = self._parse_json_response(completion)
+        if parsed is None:
+            raise ValueError('Unable to parse Anthropic JSON response')
+
+        return TriageResponse(**parsed)
+
+    def _build_prompt(self, payload: TriageRequest) -> str:
+        return (
+            'You are a maternal health triage assistant for rural Nigeria. '
+            'The user has spoken a symptom description in the target language. '
+            'Analyze the transcript and respond ONLY with a JSON object containing the following keys: '
+            'decision, follow_up_question, risk_level, detected_symptoms, recommendation, reasoning. '
+            'Use "need_more_info" if you need exactly one follow-up question. Use "conclude" only when you have a final risk decision. '
+            'The risk_level MUST be HIGH, MODERATE, or LOW. '
+            'If there are no urgent danger signs, set follow_up_question to null. '
+            'Keep the recommendation concise and appropriate for a pregnant woman. '
+            'Provide the response in the same language as the transcript. '
+            '\n\n'
+            f'Conversation history: {json.dumps([turn.model_dump() for turn in payload.conversation_history])}\n'
+            f'Transcript: {payload.transcript}\n'
+            f'Language: {payload.language}\n'
+            f'Gestational week: {payload.gestational_week}\n'
+            f'Patient name: {payload.patient_name}\n'
+        )
+
+    def _parse_json_response(self, completion: str) -> dict[str, Any] | None:
+        try:
+            return json.loads(completion)
+        except json.JSONDecodeError:
+            start = completion.find('{')
+            end = completion.rfind('}')
+            if start != -1 and end != -1 and end > start:
+                try:
+                    return json.loads(completion[start:end + 1])
+                except json.JSONDecodeError:
+                    return None
+            return None
+
+    def _keyword_fallback(self, payload: TriageRequest) -> TriageResponse:
         transcript = payload.transcript.lower()
         high_risk_keywords = [
             'ciwon kai',

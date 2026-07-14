@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     debug: bool = True
     log_level: str = "INFO"
 
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-3.5-mini"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
