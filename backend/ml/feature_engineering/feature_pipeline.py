@@ -7,6 +7,7 @@ It coordinates validation, calculation, transformation, and encoding.
 from typing import Dict, Any, List
 
 import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from . import calculators
 from . import transformers
@@ -14,13 +15,84 @@ from . import validators
 from . import encoders
 
 
-class FeatureEngineeringPipeline:
-    """Orchestrates the complete feature engineering process."""
+class FeatureEngineeringPipeline(BaseEstimator, TransformerMixin):
+    """Orchestrates the complete feature engineering process.
+    
+    This class implements the sklearn transformer interface, allowing it to be
+    used in sklearn pipelines for consistent preprocessing across training,
+    validation, and test sets.
+    
+    Example:
+        >>> from sklearn.pipeline import Pipeline
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>> from ml.feature_engineering.feature_pipeline import FeatureEngineeringPipeline
+        >>>
+        >>> pipeline = Pipeline([
+        ...     ("features", FeatureEngineeringPipeline()),
+        ...     ("model", RandomForestClassifier())
+        ... ])
+        >>> pipeline.fit(X_train, y_train)
+        >>> predictions = pipeline.predict(X_test)
+    """
 
     def __init__(self):
         """Initialize the feature engineering pipeline."""
         self.validation_errors: List[str] = []
         self.feature_vector: Dict[str, Any] = {}
+    
+    def fit(self, X, y=None):
+        """
+        Fit the transformer (no-op, as feature engineering has no learnable parameters).
+        
+        Feature engineering is deterministic and does not require fitting on training data.
+        This method exists only for sklearn compatibility.
+        
+        Args:
+            X: Feature data (ignored)
+            y: Target variable (ignored)
+            
+        Returns:
+            self
+        """
+        return self
+    
+    def transform(self, X) -> pd.DataFrame:
+        """
+        Apply feature engineering to raw data.
+        
+        Works with both DataFrame input (from sklearn pipelines) and dict input
+        (for direct API calls). When used in sklearn pipelines, input will be
+        a DataFrame where each row is a patient record.
+        
+        Args:
+            X: Input data as either:
+               - pandas.DataFrame where each row is a raw patient dict
+               - list of dicts
+               - single dict (for backward compatibility)
+        
+        Returns:
+            DataFrame with engineered features (one row per input sample)
+        """
+        if isinstance(X, dict):
+            # Single record (backward compatibility)
+            return self.engineer_features(X)
+        elif isinstance(X, pd.DataFrame):
+            # DataFrame - apply feature engineering to each row
+            results = []
+            for _, row in X.iterrows():
+                row_dict = row.to_dict()
+                engineered = self.engineer_features(row_dict)
+                results.append(engineered)
+            return pd.concat(results, ignore_index=True)
+        elif isinstance(X, list):
+            # List of dicts
+            results = []
+            for record in X:
+                engineered = self.engineer_features(record)
+                results.append(engineered)
+            return pd.concat(results, ignore_index=True)
+        else:
+            raise TypeError(f"Expected DataFrame, list, or dict, got {type(X)}")
 
     def engineer_features(self, raw_data: Dict[str, Any]) -> pd.DataFrame:
         """
