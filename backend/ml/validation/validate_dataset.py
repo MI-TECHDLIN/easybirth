@@ -20,6 +20,10 @@ def validate_dataset(path: str | Path) -> None:
         raise ValueError("BMI values are unrealistic")
     if (df["systolic_bp"] < 60).any() or (df["systolic_bp"] > 220).any():
         raise ValueError("Systolic BP values are unrealistic")
+    if (df["diastolic_bp"] < 40).any() or (df["diastolic_bp"] > 140).any():
+        raise ValueError("Diastolic BP values are unrealistic")
+    if (df["systolic_bp"] <= df["diastolic_bp"]).any():
+        raise ValueError("Systolic BP must be greater than diastolic BP for all rows")
     if df.duplicated().any():
         raise ValueError("Dataset contains duplicate rows")
     print("Dataset validation passed")

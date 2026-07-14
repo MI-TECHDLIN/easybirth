@@ -228,6 +228,89 @@ class TestValidators:
         error_message = str(exc_info.value)
         assert "age" in error_message.lower()
 
+    def test_validate_converts_blood_sugar_mmol_to_mgdl(self) -> None:
+        """Blood sugar values in mmol/L are normalized to mg/dL."""
+        data = {
+            "age": 28,
+            "weeks_pregnant": 32,
+            "height_cm": 165.0,
+            "weight_kg": 70.0,
+            "systolic_bp": 130,
+            "diastolic_bp": 85,
+            "heart_rate": 80,
+            "body_temperature": 103.26,
+            "blood_sugar": 12.76,
+            "oxygen_saturation": 98.0,
+            "hemoglobin": 12.0,
+            "distance_to_hospital": 10,
+            "travel_time_minutes": 20,
+        }
+        result = validators.validate_input(data)
+        assert result["blood_sugar"] == 229.68
+        assert result["body_temperature"] == 39.59
+
+    def test_validate_clamps_spo2_noise_above_100(self) -> None:
+        """Slightly noisy SpO2 readings above 100% are clamped."""
+        data = {
+            "age": 28,
+            "weeks_pregnant": 32,
+            "height_cm": 165.0,
+            "weight_kg": 70.0,
+            "systolic_bp": 130,
+            "diastolic_bp": 85,
+            "heart_rate": 80,
+            "body_temperature": 36.8,
+            "blood_sugar": 95.0,
+            "oxygen_saturation": 102.75,
+            "hemoglobin": 12.0,
+            "distance_to_hospital": 10,
+            "travel_time_minutes": 20,
+        }
+        result = validators.validate_input(data)
+        assert result["oxygen_saturation"] == 100.0
+
+    def test_validate_accepts_high_synthetic_blood_sugar(self) -> None:
+        """Synthetic mg/dL blood sugar values above 500 are accepted."""
+        data = {
+            "age": 30,
+            "weeks_pregnant": 29,
+            "height_cm": 160.0,
+            "weight_kg": 65.0,
+            "systolic_bp": 120,
+            "diastolic_bp": 80,
+            "heart_rate": 78,
+            "body_temperature": 37.0,
+            "blood_sugar": 606.96,
+            "oxygen_saturation": 97.0,
+            "hemoglobin": 12.5,
+            "distance_to_hospital": 15,
+            "travel_time_minutes": 20,
+        }
+        result = validators.validate_input(data)
+        assert result["blood_sugar"] == 606.96
+
+    def test_validate_normalizes_synthetic_row_with_fahrenheit_and_mmol(self) -> None:
+        """Synthetic rows using Fahrenheit and mmol/L are normalized."""
+        row = {
+            "age": 29,
+            "weeks_pregnant": 37,
+            "height_cm": 163.1,
+            "weight_kg": 58.2,
+            "systolic_bp": 118,
+            "diastolic_bp": 67,
+            "heart_rate": 68,
+            "body_temperature": 102.1,
+            "blood_sugar": 9.86,
+            "oxygen_saturation": 98.5,
+            "hemoglobin": 12.34,
+            "distance_to_hospital": 9,
+            "travel_time_minutes": 2,
+        }
+        result = validators.validate_input(row)
+        assert result["body_temperature"] == 38.94
+        assert result["blood_sugar"] == 177.48
+        assert result["oxygen_saturation"] == 98.5
+
 
 class TestEncoders:
     """Test encoder functions (category → numeric code)."""

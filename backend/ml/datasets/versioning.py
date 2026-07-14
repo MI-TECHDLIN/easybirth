@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -107,7 +107,7 @@ def create_version(
 
     return DatasetVersion(
         version=version,
-        timestamp=datetime.utcnow().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         rows=len(df_to_check),
         columns=len(df_to_check.columns),
         checksum=compute_checksum(df_to_check),

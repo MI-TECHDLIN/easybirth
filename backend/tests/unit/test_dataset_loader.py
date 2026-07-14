@@ -120,6 +120,7 @@ class TestLoadSyntheticDataset:
         assert df["systolic_bp"].max() <= 220
         assert 40 <= df["diastolic_bp"].min()
         assert df["diastolic_bp"].max() <= 140
+        assert (df["systolic_bp"] > df["diastolic_bp"]).all()
 
     def test_synthetic_dataset_no_duplicates(self) -> None:
         """Synthetic dataset has no duplicate rows."""

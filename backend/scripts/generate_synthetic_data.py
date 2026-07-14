@@ -70,21 +70,51 @@ def build_dataset(samples: int, seed: int) -> pd.DataFrame:
         history_diabetes = int(rng.random() < 0.12)
         history_pre_eclampsia = int(rng.random() < 0.08)
 
-        base_systolic = float(rng.choice(systolic_values))
-        base_diastolic = float(rng.choice(diastolic_values))
+        bp_pairs = (
+            reference_df[reference_df["SystolicBP"] > reference_df["DiastolicBP"]]
+            [["SystolicBP", "DiastolicBP"]]
+            .dropna()
+            .astype(float)
+            .to_numpy()
+        )
+        if bp_pairs.size == 0:
+            raise ValueError("Reference BP pairs must include at least one valid SystolicBP > DiastolicBP row")
+
+        base_systolic, base_diastolic = bp_pairs[rng.integers(len(bp_pairs))]
         base_glucose = float(rng.choice(glucose_values))
         base_temp = float(rng.choice(temp_values))
         base_heart_rate = float(rng.choice(heart_rate_values))
 
         severity_offset = {"Low": 0, "Moderate": 8, "High": 18, "Emergency": 35}[target_level]
-        systolic_bp = int(round(base_systolic + severity_offset + rng.normal(0, 8)))
-        systolic_bp = max(60, min(220, systolic_bp))
-        diastolic_bp = int(round(base_diastolic + severity_offset // 2 + rng.normal(0, 4)))
+        diastolic_bp = int(round(base_diastolic + severity_offset / 2 + rng.normal(0, 4)))
         diastolic_bp = max(40, min(140, diastolic_bp))
+
+        systolic_bp = int(round(base_systolic + severity_offset + rng.normal(0, 8)))
+        min_systolic = diastolic_bp + 1
+        systolic_bp = max(min_systolic, systolic_bp)
+        systolic_bp = max(60, min(220, systolic_bp))
+
+        if systolic_bp <= diastolic_bp:
+            diastolic_bp = max(40, min(140, systolic_bp - 1))
+            systolic_bp = min(220, diastolic_bp + 1)
+
         heart_rate = int(round(base_heart_rate + severity_offset // 3 + rng.normal(0, 6)))
-        body_temperature = round(base_temp + (target_level in {"High", "Emergency"}) * 0.8 + rng.normal(0, 0.3), 2)
-        blood_sugar = round(base_glucose + (target_level in {"High", "Emergency"}) * 10 + rng.normal(0, 5), 2)
+        # Clamp heart rate to physiologically plausible range (>=40 bpm)
+        heart_rate = max(40, min(180, heart_rate))
+        body_temperature = round(
+            (base_temp + (target_level in {"High", "Emergency"}) * 0.8 + rng.normal(0, 0.3) - 32.0)
+            * 5.0
+            / 9.0,
+            2,
+        )
+        blood_sugar = round(
+            (base_glucose + (target_level in {"High", "Emergency"}) * 10 + rng.normal(0, 5))
+            * 18.0,
+            2,
+        )
+        blood_sugar = max(54.0, blood_sugar)
         oxygen_saturation = round(float(rng.normal(loc=97.5, scale=2.0)), 2)
+        oxygen_saturation = max(70.0, min(100.0, oxygen_saturation))
         hemoglobin = round(float(rng.normal(loc=12.2, scale=1.2)), 2)
 
         if target_level == "Emergency":
@@ -186,6 +216,10 @@ def validate_dataset(df: pd.DataFrame) -> None:
         raise ValueError("BMI values are unrealistic")
     if (df["systolic_bp"] < 60).any() or (df["systolic_bp"] > 220).any():
         raise ValueError("Systolic BP values are unrealistic")
+    if (df["diastolic_bp"] < 40).any() or (df["diastolic_bp"] > 140).any():
+        raise ValueError("Diastolic BP values are unrealistic")
+    if (df["systolic_bp"] <= df["diastolic_bp"]).any():
+        raise ValueError("Systolic BP must be greater than diastolic BP for all rows")
     if df.duplicated().any():
         raise ValueError("Dataset contains duplicate rows")
     counts = df["risk_level"].value_counts(normalize=True)

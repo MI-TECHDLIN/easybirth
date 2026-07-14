@@ -3,7 +3,8 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Ensure the backend package root is on sys.path so scripts can be imported
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from scripts.generate_synthetic_data import build_dataset, validate_dataset
 
