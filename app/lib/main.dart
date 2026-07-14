@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // `hive_flutter` and `supabase_flutter` are initialized/used in services.
 // Avoid importing them here to prevent unused-import warnings.
 import 'config/supabase_config.dart';
+import 'services/api_service.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -21,6 +22,8 @@ Future<void> main() async {
   if (isSupabaseConfigured) {
     await SupabaseService.init(url: supabaseUrl, anonKey: supabaseAnonKey);
   }
+  final backendHealthy = await ApiService.instance.checkHealth();
+  debugPrint('Backend health: ${backendHealthy ? 'ok' : 'unavailable'}');
   runApp(const EasyBirthApp());
 }
 

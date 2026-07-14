@@ -32,11 +32,12 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  google_fonts: ^6.2.1        # <-- add this line
+  google_fonts: ^6.2.1
   shared_preferences: ^2.2.0
   hive_flutter: ^1.1.0
   supabase_flutter: ^2.16.0
   uuid: ^3.0.7
+  dio: ^5.4.3
 
 dependency_overrides:
   sign_in_with_apple: ^8.1.0
