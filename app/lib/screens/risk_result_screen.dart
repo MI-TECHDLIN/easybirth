@@ -3,6 +3,7 @@
 // Drop into: lib/screens/risk_result_screen.dart
 
 import 'package:flutter/material.dart';
+import '../models/triage_response.dart';
 import '../theme.dart';
 import 'home_screen.dart';
 
@@ -10,6 +11,8 @@ class RiskResultScreen extends StatelessWidget {
   final RiskLevel riskLevel;
   final List<String> symptoms;
   final String transcript;
+  final String recommendation;
+  final String? reasoning;
   final double confidence; // 0.0 - 1.0
   final double inferenceSeconds;
   final bool chwNotified;
@@ -19,10 +22,32 @@ class RiskResultScreen extends StatelessWidget {
     required this.riskLevel,
     required this.symptoms,
     required this.transcript,
+    required this.recommendation,
+    this.reasoning,
     this.confidence = 0.94,
     this.inferenceSeconds = 0.8,
     this.chwNotified = true,
   });
+
+  factory RiskResultScreen.fromTriageResponse(
+    TriageResponse response, {
+    required String transcript,
+    double confidence = 0.94,
+    double inferenceSeconds = 0.8,
+    bool chwNotified = true,
+  }) {
+    return RiskResultScreen(
+      riskLevel: response.riskLevel,
+      symptoms: response.detectedSymptoms,
+      transcript: transcript,
+      recommendation:
+          response.recommendation ?? response.riskLevel.recommendation,
+      reasoning: response.reasoning,
+      confidence: confidence,
+      inferenceSeconds: inferenceSeconds,
+      chwNotified: chwNotified,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +65,10 @@ class RiskResultScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: AppColors.textPrimary),
+            icon: const Icon(
+              Icons.share_outlined,
+              color: AppColors.textPrimary,
+            ),
             onPressed: () {
               // Hand off to CHW / share sheet — wire up share_plus here.
             },
@@ -57,7 +85,7 @@ class RiskResultScreen extends StatelessWidget {
             Center(child: _RiskPill(riskLevel: riskLevel)),
             const SizedBox(height: 16),
             Text(
-              riskLevel.recommendation,
+              recommendation,
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium,
             ),
@@ -66,11 +94,17 @@ class RiskResultScreen extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.help_outline, size: 14, color: AppColors.secondary),
+                  const Icon(
+                    Icons.help_outline,
+                    size: 14,
+                    color: AppColors.secondary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'AI Confidence: ${(confidence * 100).round()}%',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.secondary),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.secondary,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text('|', style: AppTextStyles.caption),
@@ -96,7 +130,7 @@ class RiskResultScreen extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: symptoms.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
                   return Chip(
                     label: Text(symptoms[i], style: AppTextStyles.label),
@@ -111,6 +145,23 @@ class RiskResultScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _RecommendationCard(riskLevel: riskLevel),
+            if (reasoning != null && reasoning!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Why this recommendation?',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                reasoning!,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
             if (chwNotified) ...[
               const SizedBox(height: 16),
               const _ChwBanner(),
@@ -144,7 +195,9 @@ class RiskResultScreen extends StatelessWidget {
                 },
                 child: Text(
                   'Learn about these symptoms',
-                  style: AppTextStyles.label.copyWith(color: AppColors.secondary),
+                  style: AppTextStyles.label.copyWith(
+                    color: AppColors.secondary,
+                  ),
                 ),
               ),
             ),
@@ -178,7 +231,11 @@ class _RecordingBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Icon(Icons.graphic_eq, color: AppColors.primaryContainer, size: 20),
+          const Icon(
+            Icons.graphic_eq,
+            color: AppColors.primaryContainer,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -205,7 +262,13 @@ class _RecordingBar extends StatelessWidget {
               // Replay recorded audio via just_audio.
             },
             icon: const Icon(Icons.play_arrow, size: 16),
-            label: Text('Replay', style: AppTextStyles.label.copyWith(color: Colors.white, fontSize: 12)),
+            label: Text(
+              'Replay',
+              style: AppTextStyles.label.copyWith(
+                color: Colors.white,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ),
@@ -289,9 +352,17 @@ class _RecommendationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_title, style: AppTextStyles.title.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            _title,
+            style: AppTextStyles.title.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
-          Text(_subtitle, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+          Text(
+            _subtitle,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -308,7 +379,9 @@ class _ChwBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.safeRiskContainer,
         borderRadius: BorderRadius.circular(16),
-        border: const Border(left: BorderSide(color: AppColors.safeRisk, width: 3)),
+        border: const Border(
+          left: BorderSide(color: AppColors.safeRisk, width: 3),
+        ),
       ),
       child: Row(
         children: [

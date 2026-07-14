@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
+import '../models/conversation_turn.dart';
 import '../theme.dart';
 import '../widgets/breathing_orb.dart';
 import 'ai_processing_screen.dart';
@@ -30,12 +32,18 @@ class VoiceListeningScreen extends StatefulWidget {
   /// If provided (e.g. tapped from a suggestion chip), the transcript is
   /// pre-filled instead of being built up from the simulated stream.
   final String? prefillTranscript;
+  final String? promptMessage;
+  final String sessionId;
+  final List<ConversationTurn> conversationHistory;
 
   const VoiceListeningScreen({
     super.key,
     this.languageLabel = 'Hausa',
     this.flagEmoji = '🇳🇬',
     this.prefillTranscript,
+    this.promptMessage,
+    required this.sessionId,
+    required this.conversationHistory,
   });
 
   @override
@@ -68,8 +76,9 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
       _revealedLines.add(widget.prefillTranscript!);
     } else {
       // Simulated speech-to-text stream, revealing one line at a time.
-      _transcriptTimer =
-          Timer.periodic(const Duration(milliseconds: 1200), (timer) {
+      _transcriptTimer = Timer.periodic(const Duration(milliseconds: 1200), (
+        timer,
+      ) {
         if (_lineIndex >= _demoTranscriptLines.length) {
           timer.cancel();
           return;
@@ -90,9 +99,30 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
     super.dispose();
   }
 
+  String get _languageCode {
+    return widget.languageLabel.toLowerCase() == 'pidgin'
+        ? 'pidgin'
+        : widget.languageLabel.toLowerCase();
+  }
+
   void _finish() {
+    final transcript = widget.prefillTranscript ?? _revealedLines.join(' ');
+    final history = [
+      ...widget.conversationHistory,
+      ConversationTurn(role: 'user', content: transcript),
+    ];
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AiProcessingScreen()),
+      MaterialPageRoute(
+        builder: (_) => AiProcessingScreen(
+          sessionId: widget.sessionId,
+          transcript: transcript,
+          language: _languageCode,
+          patientName: 'Amina',
+          gestationalWeek: 30,
+          conversationHistory: history,
+        ),
+      ),
     );
   }
 
@@ -125,7 +155,10 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(widget.flagEmoji, style: const TextStyle(fontSize: 12)),
+                        Text(
+                          widget.flagEmoji,
+                          style: const TextStyle(fontSize: 12),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           widget.languageLabel,
@@ -140,6 +173,37 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
               ),
             ),
 
+            const SizedBox(height: 24),
+            if (widget.promptMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Follow-up question',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.promptMessage!,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
             const BreathingOrb(state: OrbState.listening),
             const SizedBox(height: 8),
