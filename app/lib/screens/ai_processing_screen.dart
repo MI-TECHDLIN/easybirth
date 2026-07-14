@@ -4,16 +4,27 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/triage_service.dart';
+import '../models/triage_response.dart';
 import '../theme.dart';
 import '../widgets/breathing_orb.dart';
 import 'risk_result_screen.dart';
 
 class AiProcessingScreen extends StatefulWidget {
-  /// Injected by the inference pipeline once TFLite / risk classification
-  /// completes. Defaults to a demo HIGH RISK result for the prototype.
+  final String transcript;
+  final String language;
+  final String patientName;
+  final int gestationalWeek;
   final RiskLevel? seedResultLevel;
 
-  const AiProcessingScreen({super.key, this.seedResultLevel});
+  const AiProcessingScreen({
+    super.key,
+    required this.transcript,
+    required this.language,
+    required this.patientName,
+    required this.gestationalWeek,
+    this.seedResultLevel,
+  });
 
   @override
   State<AiProcessingScreen> createState() => _AiProcessingScreenState();
@@ -21,7 +32,6 @@ class AiProcessingScreen extends StatefulWidget {
 
 class _AiProcessingScreenState extends State<AiProcessingScreen> {
   Timer? _dotsTimer;
-  Timer? _navigateTimer;
   int _dotCount = 1;
 
   @override
@@ -29,34 +39,55 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
     super.initState();
 
     _dotsTimer = Timer.periodic(const Duration(milliseconds: 600), (_) {
+      if (!mounted) return;
       setState(() => _dotCount = (_dotCount % 3) + 1);
     });
 
-    // Simulated 1-3s on-device inference window. Replace with a callback
-    // from the tflite_flutter compute() isolate on inference complete.
-    _navigateTimer = Timer(const Duration(milliseconds: 1800), () {
+    _runTriage();
+  }
+
+  Future<void> _runTriage() async {
+    try {
+      final response = await TriageService.instance.runTriage(
+        transcript: widget.transcript,
+        language: widget.language,
+        gestationalWeek: widget.gestationalWeek,
+        patientName: widget.patientName,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => RiskResultScreen(
+            riskLevel: response.riskLevel,
+            symptoms: response.detectedSymptoms,
+            transcript: widget.transcript,
+            confidence: 0.95,
+            inferenceSeconds: 1.4,
+            chwNotified: response.riskLevel == RiskLevel.high,
+          ),
+        ),
+      );
+    } catch (error) {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => RiskResultScreen(
             riskLevel: widget.seedResultLevel ?? RiskLevel.high,
-            symptoms: const [
-              'Severe headache',
-              'Swollen hands',
-              'Blurred vision',
-            ],
-            transcript:
-                '"Ina jin ciwon kai sosai... idanuna na gani duhun-...',
+            symptoms: const ['Simulated result due to backend error'],
+            transcript: widget.transcript,
+            confidence: 0.0,
+            inferenceSeconds: 0.0,
+            chwNotified: false,
           ),
         ),
       );
-    });
+    }
   }
 
   @override
   void dispose() {
     _dotsTimer?.cancel();
-    _navigateTimer?.cancel();
     super.dispose();
   }
 
@@ -102,7 +133,11 @@ class _AiProcessingScreenState extends State<AiProcessingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.lock_outline, color: Colors.white38, size: 16),
+                  const Icon(
+                    Icons.lock_outline,
+                    color: Colors.white38,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(

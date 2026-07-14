@@ -68,8 +68,9 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
       _revealedLines.add(widget.prefillTranscript!);
     } else {
       // Simulated speech-to-text stream, revealing one line at a time.
-      _transcriptTimer =
-          Timer.periodic(const Duration(milliseconds: 1200), (timer) {
+      _transcriptTimer = Timer.periodic(const Duration(milliseconds: 1200), (
+        timer,
+      ) {
         if (_lineIndex >= _demoTranscriptLines.length) {
           timer.cancel();
           return;
@@ -90,9 +91,23 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
     super.dispose();
   }
 
+  String get _languageCode {
+    return widget.languageLabel.toLowerCase() == 'pidgin'
+        ? 'pidgin'
+        : widget.languageLabel.toLowerCase();
+  }
+
   void _finish() {
+    final transcript = widget.prefillTranscript ?? _revealedLines.join(' ');
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AiProcessingScreen()),
+      MaterialPageRoute(
+        builder: (_) => AiProcessingScreen(
+          transcript: transcript,
+          language: _languageCode,
+          patientName: 'Amina',
+          gestationalWeek: 30,
+        ),
+      ),
     );
   }
 
@@ -125,7 +140,10 @@ class _VoiceListeningScreenState extends State<VoiceListeningScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(widget.flagEmoji, style: const TextStyle(fontSize: 12)),
+                        Text(
+                          widget.flagEmoji,
+                          style: const TextStyle(fontSize: 12),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           widget.languageLabel,
