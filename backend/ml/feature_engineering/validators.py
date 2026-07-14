@@ -246,23 +246,33 @@ def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
     if "oxygen_saturation" in data:
         spo2 = data["oxygen_saturation"]
         try:
-            if isinstance(spo2, (int, float)) and spo2 > 100 and spo2 <= 105:
-                # Allow small sensor noise above 100% for synthetic or
-                # rounded device readings.
+            if isinstance(spo2, (int, float)) and spo2 > 100:
+                # Clamp small float noise above 100% before validation.
                 data["oxygen_saturation"] = 100.0
         except Exception:
             pass
 
-    # If systolic and diastolic are present but reversed (diastolic > systolic),
-    # swap them — this is a common data-entry issue in synthetic datasets.
+    # If systolic and diastolic are present but reversed or equal, normalize them.
+    # Reversed values are a common data-entry issue; equal values are physiologically
+    # invalid and should be corrected for synthetic or noisy data.
     if "systolic_bp" in data and "diastolic_bp" in data:
         try:
             sbp = data.get("systolic_bp")
             dbp = data.get("diastolic_bp")
             if isinstance(sbp, (int, float)) and isinstance(dbp, (int, float)):
-                if sbp <= dbp:
-                    # swap values and cast to int
+                if sbp < dbp:
                     data["systolic_bp"], data["diastolic_bp"] = int(dbp), int(sbp)
+                elif sbp == dbp:
+                    data["systolic_bp"], data["diastolic_bp"] = int(dbp) + 1, int(sbp)
+        except Exception:
+            pass
+
+    # Normalize heart rate to integer and clamp to plausible range
+    if "heart_rate" in data:
+        try:
+            hr = data.get("heart_rate")
+            if isinstance(hr, (int, float)):
+                data["heart_rate"] = int(max(40, min(180, int(hr))))
         except Exception:
             pass
 

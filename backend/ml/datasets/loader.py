@@ -131,5 +131,13 @@ def _validate_dataset(df: pd.DataFrame) -> None:
     if (df["bmi"] < 12).any() or (df["bmi"] > 60).any():
         raise ValueError(f"BMI values unrealistic: {df['bmi'].min()}-{df['bmi'].max()}")
 
+    if (df["diastolic_bp"] < 40).any() or (df["diastolic_bp"] > 140).any():
+        raise ValueError(f"Diastolic BP values are unrealistic: {df['diastolic_bp'].min()}-{df['diastolic_bp'].max()}")
+
+    if (df["systolic_bp"] <= df["diastolic_bp"]).any():
+        raise ValueError(
+            f"Dataset contains {int((df['systolic_bp'] <= df['diastolic_bp']).sum())} rows where systolic_bp <= diastolic_bp"
+        )
+
     if df.duplicated().any():
         raise ValueError(f"Dataset contains {df.duplicated().sum()} duplicate rows")
