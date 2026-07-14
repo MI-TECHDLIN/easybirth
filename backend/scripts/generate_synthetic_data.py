@@ -82,8 +82,18 @@ def build_dataset(samples: int, seed: int) -> pd.DataFrame:
         diastolic_bp = int(round(base_diastolic + severity_offset // 2 + rng.normal(0, 4)))
         diastolic_bp = max(40, min(140, diastolic_bp))
         heart_rate = int(round(base_heart_rate + severity_offset // 3 + rng.normal(0, 6)))
-        body_temperature = round(base_temp + (target_level in {"High", "Emergency"}) * 0.8 + rng.normal(0, 0.3), 2)
-        blood_sugar = round(base_glucose + (target_level in {"High", "Emergency"}) * 10 + rng.normal(0, 5), 2)
+        body_temperature = round(
+            (base_temp + (target_level in {"High", "Emergency"}) * 0.8 + rng.normal(0, 0.3) - 32.0)
+            * 5.0
+            / 9.0,
+            2,
+        )
+        blood_sugar = round(
+            (base_glucose + (target_level in {"High", "Emergency"}) * 10 + rng.normal(0, 5))
+            * 18.0,
+            2,
+        )
+        blood_sugar = max(54.0, blood_sugar)
         oxygen_saturation = round(float(rng.normal(loc=97.5, scale=2.0)), 2)
         hemoglobin = round(float(rng.normal(loc=12.2, scale=1.2)), 2)
 

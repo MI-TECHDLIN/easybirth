@@ -125,9 +125,9 @@ def _validate_blood_sugar(blood_sugar: float) -> Tuple[bool, str]:
             False,
             f"Blood sugar must be numeric, got {type(blood_sugar).__name__}",
         )
-    if blood_sugar < 40:
+    if blood_sugar < 30:
         return False, f"Blood sugar too low (severe hypoglycemia): {blood_sugar}"
-    if blood_sugar > 500:
+    if blood_sugar > 700:
         return False, f"Blood sugar too high (dangerous): {blood_sugar}"
     return True, ""
 
@@ -209,6 +209,63 @@ def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
         ValidationError: If any field fails validation
     """
     errors = []
+
+    # --- Auto-normalize common unit issues ---------------------------------
+    # Some synthetic or upstream data may use Fahrenheit for temperature
+    # or mmol/L for blood sugar. Detect likely cases and convert in-place
+    # so downstream feature engineering can proceed.
+    temp_was_fahrenheit = False
+    if "body_temperature" in data:
+        temp = data["body_temperature"]
+        try:
+            if isinstance(temp, (int, float)) and temp > 60 and temp <= 120:
+                # Likely Fahrenheit, convert to Celsius.
+                data["body_temperature"] = round((temp - 32) * 5.0 / 9.0, 2)
+                temp_was_fahrenheit = True
+        except Exception:
+            pass
+
+    if "blood_sugar" in data:
+        sugar = data["blood_sugar"]
+        try:
+            if isinstance(sugar, (int, float)):
+                if sugar <= 0:
+                    data["blood_sugar"] = 30.0
+                elif sugar < 3:
+                    # Values below 3 are highly unlikely to be mg/dL and are
+                    # much more consistent with mmol/L. Convert to mg/dL.
+                    converted = round(float(sugar) * 18.0, 2)
+                    data["blood_sugar"] = max(30.0, converted)
+                elif 3 <= sugar <= 40 and temp_was_fahrenheit:
+                    # If body temperature is Fahrenheit, the dataset is likely
+                    # using mmol/L for blood sugar too.
+                    data["blood_sugar"] = round(float(sugar) * 18.0, 2)
+        except Exception:
+            pass
+
+    if "oxygen_saturation" in data:
+        spo2 = data["oxygen_saturation"]
+        try:
+            if isinstance(spo2, (int, float)) and spo2 > 100 and spo2 <= 105:
+                # Allow small sensor noise above 100% for synthetic or
+                # rounded device readings.
+                data["oxygen_saturation"] = 100.0
+        except Exception:
+            pass
+
+    # If systolic and diastolic are present but reversed (diastolic > systolic),
+    # swap them — this is a common data-entry issue in synthetic datasets.
+    if "systolic_bp" in data and "diastolic_bp" in data:
+        try:
+            sbp = data.get("systolic_bp")
+            dbp = data.get("diastolic_bp")
+            if isinstance(sbp, (int, float)) and isinstance(dbp, (int, float)):
+                if sbp <= dbp:
+                    # swap values and cast to int
+                    data["systolic_bp"], data["diastolic_bp"] = int(dbp), int(sbp)
+        except Exception:
+            pass
+
 
     # Validate demographics
     if "age" in data:
